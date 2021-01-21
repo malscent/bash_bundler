@@ -1,0 +1,7 @@
+github.com/mvdan/sh v1.3.1 h1:I5hJ5SrNww5pPP09lJI+bMMx7gKVTFVb5jJVQKaTKp8=
+github.com/mvdan/sh v2.6.4+incompatible h1:D4oEWW0J8cL7zeQkrXw76IAYXF0mJfDaBwjgzmKb6zs=
+github.com/mvdan/sh v2.6.4+incompatible/go.mod h1:kipHzrJQZEDCMTNRVRAlMMFjqHEYrthfIlFkJSrmDZE=
+github.com/thatisuday/clapper v1.0.10 h1:1EkqE/nb4npp8DuTKnpvVzO/Mcac9lOPND34uUKF+bU=
+github.com/thatisuday/clapper v1.0.10/go.mod h1:FQGIg8q2uzeI+3SUS82YKF4E3KexkHStbiK4qTfDknM=
+github.com/thatisuday/commando v1.0.4 h1:aNdH9tvmx2EPG6rT3NTQOV/qFYPf4Ap4Spo+q+n9Ois=
+github.com/thatisuday/commando v1.0.4/go.mod h1:ODGz6jwJs4QqhLJtCjRRs8xIrmLLMdatYYddP+v1b4E=
