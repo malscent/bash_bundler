@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/mvdan/sh/syntax"
+	"mvdan.cc/sh/v3/syntax"
 	"os"
 	"io"
 	"fmt"
@@ -125,8 +125,7 @@ func minify(content string) (string, error) {
 	var reader = strings.NewReader(content)
 	var output string = "#!/bin/bash\n"
 	var buffer = bytes.NewBufferString(output)
-	var printer = syntax.NewPrinter()
-	syntax.Minify(printer)
+	var printer = syntax.NewPrinter(syntax.Minify(true))
 	var parser = syntax.NewParser()
 	node, err := parser.Parse(reader, "")
 	if err != nil {
@@ -143,11 +142,8 @@ func bundle(path string, keepSheBang bool) (string, error) {
 	var output string = header(path, keepSheBang)
 	var directory string = filepath.Dir(path)
 	var buffer = bytes.NewBufferString(output)
-	var printer = syntax.NewPrinter(syntax.Indent(4))
-	syntax.KeepPadding(printer)
-	
-	var parser = syntax.NewParser()
-	syntax.KeepComments(parser)
+	var printer = syntax.NewPrinter(syntax.Indent(4), syntax.KeepPadding(true))
+	var parser = syntax.NewParser(syntax.KeepComments(true))
 	file, err := os.Open(path)
 	if err != nil {
 		return "", err
