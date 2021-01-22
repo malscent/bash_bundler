@@ -39,11 +39,13 @@ func main() {
 			 SetDescription("Takes an entry bash script and bundles it and all its sources into a single output file.").
 			 AddFlag("entry,e", "The entrypoint to the bash script to bundle.", commando.String, nil).
 			 AddFlag("output,o", "The output file to write to", commando.String, nil).
+			 AddFlag("minify,m", "Minify the output file", commando.Bool, false).
 			 SetAction(func(args map[string]commando.ArgValue, flags map[string]commando.FlagValue) {
-				fmt.Printf("Performing bundling on: %v\n", flags["entry"].Value)
+				fmt.Printf("Performing bundling on entrypoint: %v\n", flags["entry"].Value)
 				fmt.Printf("Bundling output to: %v\n", flags["output"].Value)
 				entry, err := flags["entry"].GetString()
 				output, err :=  flags["output"].GetString()
+				min, err := flags["minify"].GetBool()
 				if (err != nil) {
 					fmt.Println("Error reading parameters.")
 				}
@@ -52,11 +54,20 @@ func main() {
 					fmt.Println("ERROR:  " + err.Error())
 					return
 				}
+				if min {
+					content, err = minify(content)
+					if err != nil {
+						fmt.Println("ERROR:  " + err.Error())
+						return
+					}
+				}
 				err = writeToFile(output, content)
 				if err != nil {
 					fmt.Println("ERROR:  " + err.Error())
 					return
 				}
+
+				
 			 })
 	
 	commando.Parse(nil)
@@ -110,6 +121,24 @@ func footer(path string) string {
 	return s
 }
 
+func minify(content string) (string, error) {
+	var reader = strings.NewReader(content)
+	var output string = "#!/bin/bash\n"
+	var buffer = bytes.NewBufferString(output)
+	var printer = syntax.NewPrinter()
+	syntax.Minify(printer)
+	var parser = syntax.NewParser()
+	node, err := parser.Parse(reader, "")
+	if err != nil {
+		return "", err
+	}
+	err = printer.Print(buffer, node)
+	if err != nil {
+		return "", err
+	}
+	return buffer.String(), nil
+}
+
 func bundle(path string, keepSheBang bool) (string, error) {
 	var output string = header(path, keepSheBang)
 	var directory string = filepath.Dir(path)
@@ -131,10 +160,10 @@ func bundle(path string, keepSheBang bool) (string, error) {
 		temp := strings.Split(internalBuffer.String(), "\n") 
 		for _, s := range temp {
 			if strings.Contains(s, "source") && !strings.HasPrefix(strings.TrimSpace(s), "#") {
-				fmt.Println("This line contains source: " + s)
 				set := strings.Split(strings.TrimSpace(s), " ")
 				set = deleteEmpty(set)
 				subPath := directory + "/" + trimQuotes(strings.TrimSpace(set[1]))
+				fmt.Println("Bundling Source: " + subPath)
 				sub, err := bundle(subPath, false)
 				if (err != nil) {
 					fmt.Println(err.Error())
