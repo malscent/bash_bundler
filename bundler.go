@@ -15,7 +15,7 @@ import (
 
 func main() {
 	// configure commando
-	commando.SetExecutableName("sbb").
+	commando.SetExecutableName("bash_bundler").
 			 SetVersion("1.0.0").
 			 SetDescription("This simple tool bundles bash files into a single bash file.")
 	
@@ -125,8 +125,8 @@ func minify(content string) (string, error) {
 	var reader = strings.NewReader(content)
 	var output string = "#!/bin/bash\n"
 	var buffer = bytes.NewBufferString(output)
-	var printer = syntax.NewPrinter(syntax.Minify(true))
-	var parser = syntax.NewParser()
+	var printer = syntax.NewPrinter(syntax.Minify(true), syntax.KeepPadding(false))
+	var parser = syntax.NewParser(syntax.KeepComments(false))
 	node, err := parser.Parse(reader, "")
 	if err != nil {
 		return "", err
