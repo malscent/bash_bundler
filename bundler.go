@@ -1,80 +1,79 @@
 package main
 
 import (
+	"bytes"
+	"fmt"
+	"github.com/thatisuday/commando"
+	"io"
+	"io/ioutil"
 	"mvdan.cc/sh/v3/syntax"
 	"os"
-	"io"
-	"fmt"
-	"bytes"
+	"path/filepath"
 	"strings"
 	"time"
-	"github.com/thatisuday/commando"
-	"path/filepath"
-	"io/ioutil"
 )
 
 func main() {
 	// configure commando
 	commando.SetExecutableName("bash_bundler").
-			 SetVersion("1.0.0").
-			 SetDescription("This simple tool bundles bash files into a single bash file.")
-	
+		SetVersion("1.0.0").
+		SetDescription("This simple tool bundles bash files into a single bash file.")
+
 	commando.Register(nil).
-			SetAction(func(args map[string]commando.ArgValue, flags map[string]commando.FlagValue) {
-				fmt.Printf("Printing options of the `info` command...\n\n")
+		SetAction(func(args map[string]commando.ArgValue, flags map[string]commando.FlagValue) {
+			fmt.Printf("Printing options of the `info` command...\n\n")
 
-				// print arguments
-				for k, v := range args {
-					fmt.Printf("arg -> %v: %v(%T)\n", k, v.Value, v.Value)
-				}
+			// print arguments
+			for k, v := range args {
+				fmt.Printf("arg -> %v: %v(%T)\n", k, v.Value, v.Value)
+			}
 
-				// print flags
-				for k, v := range flags {
-					fmt.Printf("flag -> %v: %v(%T)\n", k, v.Value, v.Value)
-				}
-			})
-	
+			// print flags
+			for k, v := range flags {
+				fmt.Printf("flag -> %v: %v(%T)\n", k, v.Value, v.Value)
+			}
+		})
+
 	commando.Register("bundle").
-			 SetShortDescription("bundle a bash script").
-			 SetDescription("Takes an entry bash script and bundles it and all its sources into a single output file.").
-			 AddFlag("entry,e", "The entrypoint to the bash script to bundle.", commando.String, nil).
-			 AddFlag("output,o", "The output file to write to", commando.String, nil).
-			 AddFlag("minify,m", "Minify the output file", commando.Bool, false).
-			 SetAction(func(args map[string]commando.ArgValue, flags map[string]commando.FlagValue) {
-				fmt.Printf("Performing bundling on entrypoint: %v\n", flags["entry"].Value)
-				fmt.Printf("Bundling output to: %v\n", flags["output"].Value)
-				entry, err := flags["entry"].GetString()
-				output, err :=  flags["output"].GetString()
-				min, err := flags["minify"].GetBool()
-				if (err != nil) {
-					fmt.Println("Error reading parameters.")
-				}
-				content, err := bundle(entry, true)
+		SetShortDescription("bundle a bash script").
+		SetDescription("Takes an entry bash script and bundles it and all its sources into a single output file.").
+		AddFlag("entry,e", "The entrypoint to the bash script to bundle.", commando.String, nil).
+		AddFlag("output,o", "The output file to write to", commando.String, nil).
+		AddFlag("minify,m", "Minify the output file", commando.Bool, false).
+		SetAction(func(args map[string]commando.ArgValue, flags map[string]commando.FlagValue) {
+			fmt.Printf("Performing bundling on entrypoint: %v\n", flags["entry"].Value)
+			fmt.Printf("Bundling output to: %v\n", flags["output"].Value)
+			entry, err := flags["entry"].GetString()
+			output, err := flags["output"].GetString()
+			min, err := flags["minify"].GetBool()
+			if err != nil {
+				fmt.Println("Error reading parameters.")
+			}
+			content, err := bundle(entry, true)
+			if err != nil {
+				fmt.Println("ERROR:  " + err.Error())
+				return
+			}
+			if min {
+				content, err = minify(content)
 				if err != nil {
 					fmt.Println("ERROR:  " + err.Error())
 					return
 				}
-				if min {
-					content, err = minify(content)
-					if err != nil {
-						fmt.Println("ERROR:  " + err.Error())
-						return
-					}
-				}
-				err = writeToFile(output, content)
-				if err != nil {
-					fmt.Println("ERROR:  " + err.Error())
-					return
-				}
+			}
+			err = writeToFile(output, content)
+			if err != nil {
+				fmt.Println("ERROR:  " + err.Error())
+				return
+			}
 
-				
-			 })
-	
+		})
+
 	commando.Parse(nil)
 }
 
 func isShebang(line string) bool {
-  return strings.HasPrefix(line, "#!")
+	return strings.HasPrefix(line, "#!")
 }
 
 func deleteEmpty(s []string) []string {
@@ -89,14 +88,13 @@ func deleteEmpty(s []string) []string {
 
 func trimQuotes(s string) string {
 	if len(s) >= 2 {
-		if (s[0] == '"' || s[0] == '\'') && 
-		   (s[len(s) -1] == '"' || s[len(s) -1] == '\'' ) {
-			return s[1 : len(s) - 1]
+		if (s[0] == '"' || s[0] == '\'') &&
+			(s[len(s)-1] == '"' || s[len(s)-1] == '\'') {
+			return s[1 : len(s)-1]
 		}
 	}
 	return s
 }
-
 
 func header(path string, keepSheBang bool) string {
 	var s string
@@ -153,7 +151,7 @@ func bundle(path string, keepSheBang bool) (string, error) {
 		var line string = ""
 		var internalBuffer = bytes.NewBufferString(line)
 		printer.Print(internalBuffer, stmt)
-		temp := strings.Split(internalBuffer.String(), "\n") 
+		temp := strings.Split(internalBuffer.String(), "\n")
 		for _, s := range temp {
 			if strings.Contains(s, "source") && !strings.HasPrefix(strings.TrimSpace(s), "#") {
 				set := strings.Split(strings.TrimSpace(s), " ")
@@ -161,7 +159,7 @@ func bundle(path string, keepSheBang bool) (string, error) {
 				subPath := directory + "/" + trimQuotes(strings.TrimSpace(set[1]))
 				fmt.Println("Bundling Source: " + subPath)
 				sub, err := bundle(subPath, false)
-				if (err != nil) {
+				if err != nil {
 					fmt.Println(err.Error())
 					return false
 				}
