@@ -1,0 +1,4 @@
+#!/bin/bash
+STATEMENT=$(echo "Cats are better than dogs!")
+echo "$STATEMENT"
+echo "Are Not!"

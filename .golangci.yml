@@ -1,0 +1,69 @@
+run:
+  timeout: 5m
+  skip-dirs:
+    - test/*
+  skip-files: [zz_generated.deepcopy.go]
+
+linters:
+  # Enable all linters
+  presets:
+    - bugs
+    - comment
+    - complexity
+    - error
+    - format
+    - import
+    - metalinter
+    - module
+    - performance
+    - sql
+    - style
+    - test
+    - unused
+  # Deal with deprecation warnings
+  enable:
+    - exportloopref
+  disable:
+    - golint # replaced with revive in 1.40
+    - interfacer
+    - maligned
+    - scopelint
+    - gofumpt # as per operator
+    - lll # long lines as per operator
+    - gochecknoglobals # global variables as per operator (and for logging)
+    - exhaustivestruct
+
+linters-settings:
+  # Code duplication filter catches a lot of duplication in test
+  # this needs refactoring at some point.
+  dupl:
+    threshold: 500
+
+issues:
+  exclude-rules:
+    # Deep copies have 'in' as the receiver, ours have something else.
+    # This linter should ignore the auto generated stuff, but doesn't.
+    - text: ST1016
+      linters:
+        - stylecheck
+    # Things that are parameterized, and don't need to be.  This is probably
+    # a gap in testing.
+    - text: always receives
+      linters:
+        - unparam
+    # Test is exempt from proper error handling.
+    - path: test/.*
+      linters:
+        - goerr113
+    # disables a rule that requires all exported consts/methods to be commented
+    - text: exported
+      linters:
+        - revive
+    # disables a rule that looks at json tags and complains about camel case
+    # since these values come from Couchbase Server, there is no fixing it.
+    - text: json
+      linters:
+        - tagliatelle
+    - text: parallel
+      linters:
+        - parrelleltest
