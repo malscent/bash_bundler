@@ -14,6 +14,9 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
+const indentSize = 4
+const emptyStringIndicator = 2
+
 var log = logf.Log.WithName("bundler")
 
 func CheckError(err error) {
@@ -38,8 +41,6 @@ func deleteEmpty(s []string) []string {
 
 	return r
 }
-
-const emptyStringIndicator = 2
 
 func trimQuotes(s string) string {
 	if len(s) >= emptyStringIndicator {
@@ -99,7 +100,36 @@ func Minify(content string) (string, error) {
 	return buffer.String(), nil
 }
 
-const indentSize = 4
+func isComment(s string) bool {
+	return strings.HasPrefix(strings.TrimSpace(s), "#")
+}
+
+func getSubPath(s string, directory string) (string, bool, string) {
+	set := strings.Split(strings.TrimSpace(s), " ")
+	set = deleteEmpty(set)
+	embedded := false
+	prefix := ""
+	sourcePath := strings.TrimSpace(set[1])
+
+	if isEmbedded(sourcePath) {
+		sourcePath = strings.TrimSuffix(sourcePath, ")")
+		prefix = strings.TrimSuffix(set[0], "source")
+		embedded = true
+	}
+
+	sourcePath = trimQuotes(sourcePath)
+	if strings.HasPrefix(sourcePath, "./") {
+		sourcePath = strings.TrimPrefix(sourcePath, "./")
+	}
+
+	subPath := directory + "/" + sourcePath
+
+	return subPath, embedded, prefix
+}
+
+func isEmbedded(s string) bool {
+	return strings.HasSuffix(s, ")")
+}
 
 func Bundle(path string, keepSheBang bool) (string, error) {
 	output := header(path, keepSheBang)
@@ -125,21 +155,8 @@ func Bundle(path string, keepSheBang bool) (string, error) {
 		printer.Print(internalBuffer, stmt)
 		temp := strings.Split(internalBuffer.String(), "\n")
 		for _, s := range temp {
-			if strings.Contains(s, "source") && !strings.HasPrefix(strings.TrimSpace(s), "#") {
-				set := strings.Split(strings.TrimSpace(s), " ")
-				set = deleteEmpty(set)
-				embedded := false
-				sourcePath := strings.TrimSpace(set[1])
-				if strings.HasSuffix(sourcePath, ")") {
-					sourcePath = strings.TrimSuffix(sourcePath, ")")
-					embedded = true
-				}
-				sourcePath = trimQuotes(sourcePath)
-				if strings.HasPrefix(sourcePath, "./") {
-					sourcePath = strings.TrimPrefix(sourcePath, "./")
-				}
-
-				subPath := directory + "/" + sourcePath
+			if strings.Contains(s, "source") && !isComment(s) {
+				subPath, embedded, prefix := getSubPath(s, directory)
 				log.Info("Bundling Source", "sourceFile", subPath)
 				sub, err := Bundle(subPath, false)
 				if err != nil {
@@ -148,7 +165,7 @@ func Bundle(path string, keepSheBang bool) (string, error) {
 					return false
 				}
 				if embedded {
-					sub = strings.TrimSuffix(set[0], "source") + sub + ")\n"
+					sub = prefix + sub + ")\n"
 				}
 				buffer.WriteString(sub)
 			} else if !isShebang(s) {

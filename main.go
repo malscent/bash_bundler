@@ -63,6 +63,5 @@ func main() {
 			err = bundler.WriteToFile(output, content)
 			bundler.CheckError(err)
 		})
-
 	commando.Parse(nil)
 }
